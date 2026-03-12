@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="pt-br">
 
@@ -8,11 +9,7 @@
 
 <title>ALVES 4.0</title>
 
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f1117">
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
 
@@ -151,7 +148,6 @@ border-radius:5px;
 <th>Foto</th>
 <th>Editar</th>
 <th>Quitar</th>
-<th>PDF</th>
 <th>X</th>
 </tr>
 </thead>
@@ -159,8 +155,6 @@ border-radius:5px;
 <tbody id="tabelaServicos"></tbody>
 
 </table>
-
-<button onclick="relatorioPDF()">Relatório PDF Completo</button>
 
 <canvas id="grafico"></canvas>
 
@@ -197,9 +191,24 @@ border-radius:5px;
 
 <script>
 
-if ("serviceWorker" in navigator) {
-navigator.serviceWorker.register("service-worker.js")
-}
+const cliente = document.getElementById("cliente")
+const servico = document.getElementById("servico")
+const valorTotal = document.getElementById("valorTotal")
+const valorPago = document.getElementById("valorPago")
+const dataServico = document.getElementById("dataServico")
+const fotoServico = document.getElementById("fotoServico")
+
+const gastoNome = document.getElementById("gastoNome")
+const gastoValor = document.getElementById("gastoValor")
+const gastoData = document.getElementById("gastoData")
+
+const tabelaServicos = document.getElementById("tabelaServicos")
+const tabelaGastos = document.getElementById("tabelaGastos")
+
+const received = document.getElementById("received")
+const paid = document.getElementById("paid")
+const profit = document.getElementById("profit")
+const wallet = document.getElementById("wallet")
 
 const DB="ALVES4_DB"
 let dados=JSON.parse(localStorage.getItem(DB))||[]
@@ -251,6 +260,7 @@ foto:foto
 }
 
 dados.push(item)
+
 salvar()
 
 }
@@ -265,13 +275,17 @@ data:gastoData.value
 }
 
 dados.push(item)
+
 salvar()
 
 }
 
 function salvar(){
+
 localStorage.setItem(DB,JSON.stringify(dados))
+
 render()
+
 }
 
 function render(){
@@ -294,6 +308,7 @@ let restante=i.total-i.pago
 let m=i.data.slice(0,7)
 
 if(!meses[m])meses[m]=0
+
 meses[m]+=i.pago
 
 tabelaServicos.innerHTML+=`
@@ -307,10 +322,10 @@ tabelaServicos.innerHTML+=`
 <td>${i.foto?`<img src="${i.foto}">`:"-"}</td>
 <td><button onclick="editarServico(${index})">Editar</button></td>
 <td><button onclick="quitar(${index})">Quitar</button></td>
-<td><button onclick="gerarPDF(${index})">PDF</button></td>
 <td><button onclick="del(${index})">X</button></td>
 </tr>
 `
+
 }
 
 if(i.tipo=="gasto"){
@@ -340,9 +355,68 @@ wallet.innerText="R$ "+lucro.toFixed(2)
 let ordenado=Object.keys(meses).sort()
 
 chart.data.labels=ordenado
+
 chart.data.datasets[0].data=ordenado.map(m=>meses[m])
 
 chart.update()
+
+}
+
+function del(index){
+
+dados.splice(index,1)
+
+salvar()
+
+}
+
+function quitar(index){
+
+dados[index].pago=dados[index].total
+
+salvar()
+
+}
+
+function editarServico(index){
+
+let novo=prompt("Novo valor pago",dados[index].pago)
+
+if(novo!==null){
+
+dados[index].pago=parseFloat(novo)
+
+salvar()
+
+}
+
+}
+
+function buscarServico(){
+
+let busca=document.getElementById("buscaCliente").value.toLowerCase()
+
+document.querySelectorAll("#tabelaServicos tr").forEach(tr=>{
+
+let nome=tr.children[0].innerText.toLowerCase()
+
+tr.style.display=nome.includes(busca)?"":"none"
+
+})
+
+}
+
+function filtrarMes(){
+
+let mes=document.getElementById("filtroMes").value
+
+document.querySelectorAll("#tabelaServicos tr").forEach(tr=>{
+
+let data=tr.children[5].innerText
+
+tr.style.display=data.startsWith(mes)?"":"none"
+
+})
 
 }
 
@@ -352,3 +426,4 @@ render()
 
 </body>
 </html>
+```
