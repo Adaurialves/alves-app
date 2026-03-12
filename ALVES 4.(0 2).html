@@ -1,7 +1,5 @@
-```html
 <!DOCTYPE html>
 <html lang="pt-br">
-
 <head>
 
 <meta charset="UTF-8">
@@ -10,6 +8,7 @@
 <title>ALVES 4.0</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
 
@@ -148,6 +147,7 @@ border-radius:5px;
 <th>Foto</th>
 <th>Editar</th>
 <th>Quitar</th>
+<th>PDF</th>
 <th>X</th>
 </tr>
 </thead>
@@ -155,6 +155,8 @@ border-radius:5px;
 <tbody id="tabelaServicos"></tbody>
 
 </table>
+
+<button onclick="relatorioPDF()">Relatório PDF Completo</button>
 
 <canvas id="grafico"></canvas>
 
@@ -190,25 +192,6 @@ border-radius:5px;
 </div>
 
 <script>
-
-const cliente = document.getElementById("cliente")
-const servico = document.getElementById("servico")
-const valorTotal = document.getElementById("valorTotal")
-const valorPago = document.getElementById("valorPago")
-const dataServico = document.getElementById("dataServico")
-const fotoServico = document.getElementById("fotoServico")
-
-const gastoNome = document.getElementById("gastoNome")
-const gastoValor = document.getElementById("gastoValor")
-const gastoData = document.getElementById("gastoData")
-
-const tabelaServicos = document.getElementById("tabelaServicos")
-const tabelaGastos = document.getElementById("tabelaGastos")
-
-const received = document.getElementById("received")
-const paid = document.getElementById("paid")
-const profit = document.getElementById("profit")
-const wallet = document.getElementById("wallet")
 
 const DB="ALVES4_DB"
 let dados=JSON.parse(localStorage.getItem(DB))||[]
@@ -260,7 +243,6 @@ foto:foto
 }
 
 dados.push(item)
-
 salvar()
 
 }
@@ -275,17 +257,13 @@ data:gastoData.value
 }
 
 dados.push(item)
-
 salvar()
 
 }
 
 function salvar(){
-
 localStorage.setItem(DB,JSON.stringify(dados))
-
 render()
-
 }
 
 function render(){
@@ -308,7 +286,6 @@ let restante=i.total-i.pago
 let m=i.data.slice(0,7)
 
 if(!meses[m])meses[m]=0
-
 meses[m]+=i.pago
 
 tabelaServicos.innerHTML+=`
@@ -322,10 +299,10 @@ tabelaServicos.innerHTML+=`
 <td>${i.foto?`<img src="${i.foto}">`:"-"}</td>
 <td><button onclick="editarServico(${index})">Editar</button></td>
 <td><button onclick="quitar(${index})">Quitar</button></td>
+<td><button onclick="gerarPDF(${index})">PDF</button></td>
 <td><button onclick="del(${index})">X</button></td>
 </tr>
 `
-
 }
 
 if(i.tipo=="gasto"){
@@ -355,68 +332,121 @@ wallet.innerText="R$ "+lucro.toFixed(2)
 let ordenado=Object.keys(meses).sort()
 
 chart.data.labels=ordenado
-
 chart.data.datasets[0].data=ordenado.map(m=>meses[m])
 
 chart.update()
 
 }
 
-function del(index){
+function relatorioPDF(){
 
-dados.splice(index,1)
+const {jsPDF}=window.jspdf
 
-salvar()
+let pdf=new jsPDF()
+
+pdf.setFontSize(18)
+pdf.text("RELATÓRIO FINANCEIRO - ALVES 4.0",20,20)
+
+let y=40
+
+pdf.setFontSize(14)
+pdf.text("SERVIÇOS",20,y)
+
+y+=10
+
+dados.forEach(i=>{
+
+if(i.tipo=="servico"){
+
+let restante=i.total-i.pago
+
+pdf.setFontSize(10)
+
+pdf.text(
+`${i.cliente} | ${i.servico} | Total:${i.total} | Pago:${i.pago} | Rest:${restante} | ${i.data}`,
+20,y)
+
+y+=8
+
+if(y>270){
+pdf.addPage()
+y=20
+}
 
 }
 
-function quitar(index){
+})
 
-dados[index].pago=dados[index].total
+y+=10
 
-salvar()
+pdf.setFontSize(14)
+pdf.text("GASTOS",20,y)
+
+y+=10
+
+dados.forEach(i=>{
+
+if(i.tipo=="gasto"){
+
+pdf.setFontSize(10)
+
+pdf.text(
+`${i.nome} | R$ ${i.valor} | ${i.data}`,
+20,y)
+
+y+=8
+
+if(y>270){
+pdf.addPage()
+y=20
+}
 
 }
 
-function editarServico(index){
+})
 
-let novo=prompt("Novo valor pago",dados[index].pago)
-
-if(novo!==null){
-
-dados[index].pago=parseFloat(novo)
-
-salvar()
+pdf.save("relatorio_ALVES4.pdf")
 
 }
 
+function del(i){
+dados.splice(i,1)
+salvar()
 }
 
 function buscarServico(){
 
-let busca=document.getElementById("buscaCliente").value.toLowerCase()
+let filtro=buscaCliente.value.toLowerCase()
 
-document.querySelectorAll("#tabelaServicos tr").forEach(tr=>{
+let linhas=tabelaServicos.getElementsByTagName("tr")
 
-let nome=tr.children[0].innerText.toLowerCase()
+for(let i=0;i<linhas.length;i++){
 
-tr.style.display=nome.includes(busca)?"":"none"
+let cliente=linhas[i].cells[0].innerText.toLowerCase()
 
-})
+linhas[i].style.display=cliente.includes(filtro)?"":"none"
+
+}
 
 }
 
 function filtrarMes(){
 
-let mes=document.getElementById("filtroMes").value
+let mes=filtroMes.value
 
-document.querySelectorAll("#tabelaServicos tr").forEach(tr=>{
+render()
 
-let data=tr.children[5].innerText
+if(!mes)return
 
-tr.style.display=data.startsWith(mes)?"":"none"
+let linhas=tabelaServicos.getElementsByTagName("tr")
 
-})
+for(let i=0;i<linhas.length;i++){
+
+let data=linhas[i].cells[5].innerText
+
+linhas[i].style.display=data.startsWith(mes)?"":"none"
+
+}
 
 }
 
@@ -426,4 +456,3 @@ render()
 
 </body>
 </html>
-```
