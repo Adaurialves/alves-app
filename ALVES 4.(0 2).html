@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>ALVES 4.0</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1117">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+
+body{
+background:#0f1117;
+color:white;
+font-family:Arial;
+padding:20px;
+}
+
+.logo{
+font-size:30px;
+font-weight:bold;
+color:#d4af37;
+margin-bottom:20px;
+}
+
+.stats{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+gap:15px;
+}
+
+.card{
+background:linear-gradient(135deg,#1e1f27,#2b2d3a);
+padding:20px;
+border-radius:14px;
+}
+
+.card span{
+font-size:22px;
+color:#0a84ff;
+font-weight:bold;
+}
+
+.section{
+background:#1e1f27;
+padding:20px;
+border-radius:10px;
+margin-top:20px;
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+gap:10px;
+}
+
+input{
+padding:10px;
+border:none;
+border-radius:6px;
+background:#2b2d3a;
+color:white;
+}
+
+button{
+background:linear-gradient(45deg,#0a84ff,#d4af37);
+border:none;
+padding:8px 10px;
+border-radius:6px;
+color:white;
+font-weight:bold;
+cursor:pointer;
+}
+
+table{
+width:100%;
+margin-top:15px;
+border-collapse:collapse;
+}
+
+th{
+background:#2b2d3a;
+padding:10px;
+}
+
+td{
+padding:10px;
+border-bottom:1px solid #333;
+}
+
+img{
+width:50px;
+border-radius:5px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="logo">ALVES 4.0</div>
+
+<div class="stats">
+<div class="card">Recebido<br><span id="received">0</span></div>
+<div class="card">Gastos<br><span id="paid">0</span></div>
+<div class="card">Lucro<br><span id="profit">0</span></div>
+<div class="card">Carteira<br><span id="wallet">0</span></div>
+</div>
+
+<div class="section">
+
+<h3>Novo Serviço</h3>
+
+<div class="grid">
+
+<input id="cliente" placeholder="Cliente">
+<input id="servico" placeholder="Serviço">
+<input id="valorTotal" type="number" placeholder="Valor total">
+<input id="valorPago" type="number" placeholder="Valor pago">
+<input id="dataServico" type="date">
+<input type="file" id="fotoServico">
+
+</div>
+
+<button onclick="salvarServico()">Salvar Serviço</button>
+
+</div>
+
+<input id="buscaCliente" placeholder="Buscar cliente..." onkeyup="buscarServico()" style="margin-top:20px;width:100%;padding:10px">
+
+<input type="month" id="filtroMes" onchange="filtrarMes()" style="margin-top:10px;padding:10px">
+
+<table>
+
+<thead>
+<tr>
+<th>Cliente</th>
+<th>Serviço</th>
+<th>Total</th>
+<th>Pago</th>
+<th>Restante</th>
+<th>Data</th>
+<th>Foto</th>
+<th>Editar</th>
+<th>Quitar</th>
+<th>PDF</th>
+<th>X</th>
+</tr>
+</thead>
+
+<tbody id="tabelaServicos"></tbody>
+
+</table>
+
+<button onclick="relatorioPDF()">Relatório PDF Completo</button>
+
+<canvas id="grafico"></canvas>
+
+<div class="section">
+
+<h3>Gastos Diários</h3>
+
+<div class="grid">
+
+<input id="gastoNome" placeholder="Descrição">
+<input id="gastoValor" type="number" placeholder="Valor">
+<input id="gastoData" type="date">
+
+</div>
+
+<button onclick="salvarGasto()">Salvar Gasto</button>
+
+<table>
+
+<thead>
+<tr>
+<th>Descrição</th>
+<th>Valor</th>
+<th>Data</th>
+<th>X</th>
+</tr>
+</thead>
+
+<tbody id="tabelaGastos"></tbody>
+
+</table>
+
+</div>
+
+<script>
+
+if ("serviceWorker" in navigator) {
+navigator.serviceWorker.register("service-worker.js")
+}
+
+const DB="ALVES4_DB"
+let dados=JSON.parse(localStorage.getItem(DB))||[]
+
+const ctx=document.getElementById("grafico").getContext("2d")
+
+let chart=new Chart(ctx,{
+type:"line",
+data:{
+labels:[],
+datasets:[{
+data:[],
+borderColor:"#0a84ff",
+tension:0.4
+}]
+}
+})
+
+function salvarServico(){
+
+let file=fotoServico.files[0]
+
+if(file){
+
+let reader=new FileReader()
+
+reader.onload=function(){
+addServico(reader.result)
+}
+
+reader.readAsDataURL(file)
+
+}else{
+addServico("")
+}
+
+}
+
+function addServico(foto){
+
+let item={
+tipo:"servico",
+cliente:cliente.value,
+servico:servico.value,
+total:parseFloat(valorTotal.value),
+pago:parseFloat(valorPago.value||0),
+data:dataServico.value,
+foto:foto
+}
+
+dados.push(item)
+salvar()
+
+}
+
+function salvarGasto(){
+
+let item={
+tipo:"gasto",
+nome:gastoNome.value,
+valor:parseFloat(gastoValor.value),
+data:gastoData.value
+}
+
+dados.push(item)
+salvar()
+
+}
+
+function salvar(){
+localStorage.setItem(DB,JSON.stringify(dados))
+render()
+}
+
+function render(){
+
+let recebido=0
+let gasto=0
+let meses={}
+
+tabelaServicos.innerHTML=""
+tabelaGastos.innerHTML=""
+
+dados.forEach((i,index)=>{
+
+if(i.tipo=="servico"){
+
+recebido+=i.pago
+
+let restante=i.total-i.pago
+
+let m=i.data.slice(0,7)
+
+if(!meses[m])meses[m]=0
+meses[m]+=i.pago
+
+tabelaServicos.innerHTML+=`
+<tr>
+<td>${i.cliente}</td>
+<td>${i.servico}</td>
+<td>R$ ${i.total}</td>
+<td>R$ ${i.pago}</td>
+<td>R$ ${restante}</td>
+<td>${i.data}</td>
+<td>${i.foto?`<img src="${i.foto}">`:"-"}</td>
+<td><button onclick="editarServico(${index})">Editar</button></td>
+<td><button onclick="quitar(${index})">Quitar</button></td>
+<td><button onclick="gerarPDF(${index})">PDF</button></td>
+<td><button onclick="del(${index})">X</button></td>
+</tr>
+`
+}
+
+if(i.tipo=="gasto"){
+
+gasto+=i.valor
+
+tabelaGastos.innerHTML+=`
+<tr>
+<td>${i.nome}</td>
+<td>R$ ${i.valor}</td>
+<td>${i.data}</td>
+<td><button onclick="del(${index})">X</button></td>
+</tr>
+`
+
+}
+
+})
+
+let lucro=recebido-gasto
+
+received.innerText="R$ "+recebido.toFixed(2)
+paid.innerText="R$ "+gasto.toFixed(2)
+profit.innerText="R$ "+lucro.toFixed(2)
+wallet.innerText="R$ "+lucro.toFixed(2)
+
+let ordenado=Object.keys(meses).sort()
+
+chart.data.labels=ordenado
+chart.data.datasets[0].data=ordenado.map(m=>meses[m])
+
+chart.update()
+
+}
+
+render()
+
+</script>
+
+</body>
+</html>
