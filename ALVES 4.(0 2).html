@@ -1,458 +1,806 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Almoxarifado PRO | Núcleo São João</title>
+    
+    <!-- Bibliotecas Otimizadas -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <!-- SweetAlert2 para Notificações Profissionais -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
+        
+        body { 
+            background-color: #f8fafc; 
+            color: #334155; 
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* Modais Animados */
+        .modal { transition: opacity 0.2s ease, visibility 0.2s ease; }
+        .modal-content { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform: scale(0.95); }
+        .modal.flex .modal-content { transform: scale(1); }
+        
+        /* Scrollbar Elegante */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; border: 2px solid #f8fafc; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Abas Ativas */
+        .tab-active { border-bottom: 3px solid #2563eb; color: #1e40af; font-weight: 700; background: linear-gradient(to top, #eff6ff, transparent);}
+        .tab-inactive { color: #64748b; font-weight: 500; }
+        .tab-inactive:hover { color: #334155; }
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>ALVES 4.0</title>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-<style>
-
-body{
-background:#0f1117;
-color:white;
-font-family:Arial;
-padding:20px;
-}
-
-.logo{
-font-size:30px;
-font-weight:bold;
-color:#d4af37;
-margin-bottom:20px;
-}
-
-.stats{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-gap:15px;
-}
-
-.card{
-background:linear-gradient(135deg,#1e1f27,#2b2d3a);
-padding:20px;
-border-radius:14px;
-}
-
-.card span{
-font-size:22px;
-color:#0a84ff;
-font-weight:bold;
-}
-
-.section{
-background:#1e1f27;
-padding:20px;
-border-radius:10px;
-margin-top:20px;
-}
-
-.grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-gap:10px;
-}
-
-input{
-padding:10px;
-border:none;
-border-radius:6px;
-background:#2b2d3a;
-color:white;
-}
-
-button{
-background:linear-gradient(45deg,#0a84ff,#d4af37);
-border:none;
-padding:8px 10px;
-border-radius:6px;
-color:white;
-font-weight:bold;
-cursor:pointer;
-}
-
-table{
-width:100%;
-margin-top:15px;
-border-collapse:collapse;
-}
-
-th{
-background:#2b2d3a;
-padding:10px;
-}
-
-td{
-padding:10px;
-border-bottom:1px solid #333;
-}
-
-img{
-width:50px;
-border-radius:5px;
-}
-
-</style>
-
+        /* Loader Overlay */
+        #loader-overlay { backdrop-filter: blur(4px); }
+        .spinner { border: 4px solid rgba(255,255,255,0.3); border-left-color: #fff; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
 </head>
-
-<body>
-
-<div class="logo">ALVES 4.0</div>
-
-<div class="stats">
-<div class="card">Recebido<br><span id="received">0</span></div>
-<div class="card">Gastos<br><span id="paid">0</span></div>
-<div class="card">Lucro<br><span id="profit">0</span></div>
-<div class="card">Carteira<br><span id="wallet">0</span></div>
-</div>
-
-<div class="section">
-
-<h3>Novo Serviço</h3>
-
-<div class="grid">
-
-<input id="cliente" placeholder="Cliente">
-<input id="servico" placeholder="Serviço">
-<input id="valorTotal" type="number" placeholder="Valor total">
-<input id="valorPago" type="number" placeholder="Valor pago">
-<input id="dataServico" type="date">
-<input type="file" id="fotoServico">
-
-</div>
-
-<button onclick="salvarServico()">Salvar Serviço</button>
-
-</div>
-
-<input id="buscaCliente" placeholder="Buscar cliente..." onkeyup="buscarServico()" style="margin-top:20px;width:100%;padding:10px">
-
-<input type="month" id="filtroMes" onchange="filtrarMes()" style="margin-top:10px;padding:10px">
-
-<table>
-
-<thead>
-<tr>
-<th>Cliente</th>
-<th>Serviço</th>
-<th>Total</th>
-<th>Pago</th>
-<th>Restante</th>
-<th>Data</th>
-<th>Foto</th>
-<th>Editar</th>
-<th>Quitar</th>
-<th>PDF</th>
-<th>X</th>
-</tr>
-</thead>
-
-<tbody id="tabelaServicos"></tbody>
-
-</table>
-
-<button onclick="relatorioPDF()">Relatório PDF Completo</button>
-
-<canvas id="grafico"></canvas>
-
-<div class="section">
-
-<h3>Gastos Diários</h3>
-
-<div class="grid">
-
-<input id="gastoNome" placeholder="Descrição">
-<input id="gastoValor" type="number" placeholder="Valor">
-<input id="gastoData" type="date">
-
-</div>
-
-<button onclick="salvarGasto()">Salvar Gasto</button>
-
-<table>
-
-<thead>
-<tr>
-<th>Descrição</th>
-<th>Valor</th>
-<th>Data</th>
-<th>X</th>
-</tr>
-</thead>
-
-<tbody id="tabelaGastos"></tbody>
-
-</table>
-
-</div>
-
-<script>
-
-const DB="ALVES4_DB"
-let dados=JSON.parse(localStorage.getItem(DB))||[]
-
-const ctx=document.getElementById("grafico").getContext("2d")
-
-let chart=new Chart(ctx,{
-type:"line",
-data:{
-labels:[],
-datasets:[{
-data:[],
-borderColor:"#0a84ff",
-tension:0.4
-}]
-}
-})
-
-function salvarServico(){
-
-let file=fotoServico.files[0]
-
-if(file){
-
-let reader=new FileReader()
-
-reader.onload=function(){
-addServico(reader.result)
-}
-
-reader.readAsDataURL(file)
-
-}else{
-addServico("")
-}
-
-}
-
-function addServico(foto){
-
-let item={
-tipo:"servico",
-cliente:cliente.value,
-servico:servico.value,
-total:parseFloat(valorTotal.value),
-pago:parseFloat(valorPago.value||0),
-data:dataServico.value,
-foto:foto
-}
-
-dados.push(item)
-salvar()
-
-}
-
-function salvarGasto(){
-
-let item={
-tipo:"gasto",
-nome:gastoNome.value,
-valor:parseFloat(gastoValor.value),
-data:gastoData.value
-}
-
-dados.push(item)
-salvar()
-
-}
-
-function salvar(){
-localStorage.setItem(DB,JSON.stringify(dados))
-render()
-}
-
-function render(){
-
-let recebido=0
-let gasto=0
-let meses={}
-
-tabelaServicos.innerHTML=""
-tabelaGastos.innerHTML=""
-
-dados.forEach((i,index)=>{
-
-if(i.tipo=="servico"){
-
-recebido+=i.pago
-
-let restante=i.total-i.pago
-
-let m=i.data.slice(0,7)
-
-if(!meses[m])meses[m]=0
-meses[m]+=i.pago
-
-tabelaServicos.innerHTML+=`
-<tr>
-<td>${i.cliente}</td>
-<td>${i.servico}</td>
-<td>R$ ${i.total}</td>
-<td>R$ ${i.pago}</td>
-<td>R$ ${restante}</td>
-<td>${i.data}</td>
-<td>${i.foto?`<img src="${i.foto}">`:"-"}</td>
-<td><button onclick="editarServico(${index})">Editar</button></td>
-<td><button onclick="quitar(${index})">Quitar</button></td>
-<td><button onclick="gerarPDF(${index})">PDF</button></td>
-<td><button onclick="del(${index})">X</button></td>
-</tr>
-`
-}
-
-if(i.tipo=="gasto"){
-
-gasto+=i.valor
-
-tabelaGastos.innerHTML+=`
-<tr>
-<td>${i.nome}</td>
-<td>R$ ${i.valor}</td>
-<td>${i.data}</td>
-<td><button onclick="del(${index})">X</button></td>
-</tr>
-`
-
-}
-
-})
-
-let lucro=recebido-gasto
-
-received.innerText="R$ "+recebido.toFixed(2)
-paid.innerText="R$ "+gasto.toFixed(2)
-profit.innerText="R$ "+lucro.toFixed(2)
-wallet.innerText="R$ "+lucro.toFixed(2)
-
-let ordenado=Object.keys(meses).sort()
-
-chart.data.labels=ordenado
-chart.data.datasets[0].data=ordenado.map(m=>meses[m])
-
-chart.update()
-
-}
-
-function relatorioPDF(){
-
-const {jsPDF}=window.jspdf
-
-let pdf=new jsPDF()
-
-pdf.setFontSize(18)
-pdf.text("RELATÓRIO FINANCEIRO - ALVES 4.0",20,20)
-
-let y=40
-
-pdf.setFontSize(14)
-pdf.text("SERVIÇOS",20,y)
-
-y+=10
-
-dados.forEach(i=>{
-
-if(i.tipo=="servico"){
-
-let restante=i.total-i.pago
-
-pdf.setFontSize(10)
-
-pdf.text(
-`${i.cliente} | ${i.servico} | Total:${i.total} | Pago:${i.pago} | Rest:${restante} | ${i.data}`,
-20,y)
-
-y+=8
-
-if(y>270){
-pdf.addPage()
-y=20
-}
-
-}
-
-})
-
-y+=10
-
-pdf.setFontSize(14)
-pdf.text("GASTOS",20,y)
-
-y+=10
-
-dados.forEach(i=>{
-
-if(i.tipo=="gasto"){
-
-pdf.setFontSize(10)
-
-pdf.text(
-`${i.nome} | R$ ${i.valor} | ${i.data}`,
-20,y)
-
-y+=8
-
-if(y>270){
-pdf.addPage()
-y=20
-}
-
-}
-
-})
-
-pdf.save("relatorio_ALVES4.pdf")
-
-}
-
-function del(i){
-dados.splice(i,1)
-salvar()
-}
-
-function buscarServico(){
-
-let filtro=buscaCliente.value.toLowerCase()
-
-let linhas=tabelaServicos.getElementsByTagName("tr")
-
-for(let i=0;i<linhas.length;i++){
-
-let cliente=linhas[i].cells[0].innerText.toLowerCase()
-
-linhas[i].style.display=cliente.includes(filtro)?"":"none"
-
-}
-
-}
-
-function filtrarMes(){
-
-let mes=filtroMes.value
-
-render()
-
-if(!mes)return
-
-let linhas=tabelaServicos.getElementsByTagName("tr")
-
-for(let i=0;i<linhas.length;i++){
-
-let data=linhas[i].cells[5].innerText
-
-linhas[i].style.display=data.startsWith(mes)?"":"none"
-
-}
-
-}
-
-render()
-
-</script>
-
-</body>
-</html>
+<body class="h-screen flex flex-col relative overflow-hidden">
+
+    <!-- OVERLAY DE CARREGAMENTO GLOBAL -->
+    <div id="loader-overlay" class="fixed inset-0 bg-slate-900/50 z-[100] hidden flex-col items-center justify-center">
+        <div class="w-12 h-12 rounded-full spinner mb-4"></div>
+        <p class="text-white font-semibold tracking-wider animate-pulse">Sincronizando sistema...</p>
+    </div>
+
+    <!-- CABEÇALHO -->
+    <header class="bg-white border-b border-slate-200 shadow-sm z-10 flex-none">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full border-2 border-blue-100 overflow-hidden bg-blue-50 flex items-center justify-center shadow-inner relative">
+                        <img src="./logo.jpg" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" class="w-full h-full object-cover absolute inset-0">
+                        <i class="fas fa-boxes-packing text-blue-500 text-xl md:text-2xl hidden" style="display: none;"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl md:text-2xl font-black text-blue-900 tracking-tight uppercase">Núcleo <span class="text-blue-600">São João</span></h1>
+                        <p class="text-slate-500 text-[9px] md:text-[10px] font-bold uppercase tracking-widest"><i class="fas fa-check-circle text-green-500 mr-1"></i> Gestão de Almoxarifado</p>
+                    </div>
+                </div>
+                
+                <!-- Abas Desktop -->
+                <nav class="hidden md:flex space-x-2 h-full pt-6">
+                    <button onclick="App.mudarAba('aba-dashboard')" id="btn-aba-dashboard" class="px-6 py-2 rounded-t-lg tab-active transition">Dashboard</button>
+                    <button onclick="App.mudarAba('aba-estoque')" id="btn-aba-estoque" class="px-6 py-2 rounded-t-lg tab-inactive transition">Estoque Geral</button>
+                    <button onclick="App.mudarAba('aba-historico')" id="btn-aba-historico" class="px-6 py-2 rounded-t-lg tab-inactive transition">Movimentações</button>
+                </nav>
+
+                <div class="flex gap-2">
+                    <button onclick="App.gerarPlanilha()" class="hidden md:flex bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg font-semibold text-sm transition shadow-sm items-center gap-2" title="Exportar para Excel">
+                        <i class="fas fa-file-excel"></i>
+                    </button>
+                    <button onclick="App.gerarPDF()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition shadow-sm flex items-center gap-2">
+                        <i class="fas fa-file-pdf"></i> <span class="hidden md:inline">Relatório PDF</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MENU MOBILE -->
+    <div class="md:hidden flex bg-white border-b border-slate-200 w-full justify-around flex-none">
+        <button onclick="App.mudarAba('aba-dashboard')" id="m-btn-aba-dashboard" class="flex-1 py-3 text-sm font-bold text-blue-700 border-b-2 border-blue-600">Visão Geral</button>
+        <button onclick="App.mudarAba('aba-estoque')" id="m-btn-aba-estoque" class="flex-1 py-3 text-sm font-semibold text-slate-500">Materiais</button>
+        <button onclick="App.mudarAba('aba-historico')" id="m-btn-aba-historico" class="flex-1 py-3 text-sm font-semibold text-slate-500">Histórico</button>
+    </div>
+
+    <!-- ÁREA PRINCIPAL -->
+    <main class="flex-1 overflow-auto p-4 md:p-8 max-w-7xl mx-auto w-full pb-20">
+        
+        <!-- ================= ABA 1: DASHBOARD ================= -->
+        <section id="aba-dashboard" class="space-y-6 animate-fade-in">
+            <div class="flex justify-between items-end">
+                <h2 class="text-xl font-bold text-slate-800">Indicadores do Estoque</h2>
+                <button onclick="App.sincronizar()" class="text-sm text-slate-500 hover:text-blue-600 transition flex items-center gap-1"><i class="fas fa-sync-alt"></i> Atualizar Dados</button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                <!-- Card 1 -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition text-5xl"><i class="fas fa-box"></i></div>
+                    <p class="text-xs text-slate-500 uppercase font-bold mb-1 tracking-wider">Itens Cadastrados</p>
+                    <h3 id="dash-total-itens" class="text-4xl font-black text-slate-800">0</h3>
+                </div>
+                <!-- Card 2 -->
+                <div class="bg-gradient-to-br from-blue-500 to-blue-700 p-6 rounded-2xl shadow-md text-white relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-30 transition text-5xl"><i class="fas fa-layer-group"></i></div>
+                    <p class="text-xs text-blue-100 uppercase font-bold mb-1 tracking-wider">Volume Físico (Peças)</p>
+                    <h3 id="dash-total-pecas" class="text-4xl font-black">0</h3>
+                </div>
+                <!-- Card 3 -->
+                <div class="bg-gradient-to-br from-red-500 to-rose-600 p-6 rounded-2xl shadow-md text-white relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-30 transition text-5xl"><i class="fas fa-triangle-exclamation"></i></div>
+                    <p class="text-xs text-red-100 uppercase font-bold mb-1 tracking-wider">Estoque Crítico / Baixo</p>
+                    <h3 id="dash-alertas" class="text-4xl font-black">0</h3>
+                </div>
+            </div>
+
+            <!-- Tabela de Alertas -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-8">
+                <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center gap-3">
+                    <span class="flex h-3 w-3 relative">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                    </span>
+                    <h3 class="font-bold text-slate-700 text-sm uppercase">Urgente: Reposição Necessária</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead class="bg-white text-slate-400 text-[10px] uppercase border-b border-slate-100">
+                            <tr><th class="px-6 py-3">Código/Material</th><th class="px-6 py-3 text-center">Mínimo Ideal</th><th class="px-6 py-3 text-right">Saldo Atual</th></tr>
+                        </thead>
+                        <tbody id="tabela-alertas" class="divide-y divide-slate-50">
+                            <!-- Preenchido via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= ABA 2: ESTOQUE GERAL ================= -->
+        <section id="aba-estoque" class="hidden space-y-4 animate-fade-in">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-2 md:p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="relative w-full md:w-1/2">
+                    <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="busca" placeholder="Pesquisar por nome, código ou categoria..." class="w-full pl-11 pr-4 py-3 md:py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500 focus:bg-white text-sm transition">
+                </div>
+                <button onclick="App.UI.abrirModalProduto()" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 md:py-2.5 rounded-lg font-bold text-sm transition flex items-center justify-center gap-2 shadow-sm">
+                    <i class="fas fa-plus"></i> NOVO MATERIAL
+                </button>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead class="bg-slate-800 text-slate-100 text-[11px] uppercase tracking-wider font-semibold">
+                            <tr>
+                                <th class="px-5 py-4">Cod.</th>
+                                <th class="px-5 py-4">Material / Produto</th>
+                                <th class="px-5 py-4">Categoria/Validade</th>
+                                <th class="px-5 py-4 text-center">Und.</th>
+                                <th class="px-5 py-4 text-right">Saldo</th>
+                                <th class="px-5 py-4 text-center border-l border-slate-700">Lançar</th>
+                                <th class="px-5 py-4 text-center">Config</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-estoque" class="divide-y divide-slate-100 text-slate-700">
+                            <!-- Preenchido via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= ABA 3: HISTÓRICO ================= -->
+        <section id="aba-historico" class="hidden space-y-4 animate-fade-in">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h3 class="font-bold text-slate-700 flex items-center gap-2">
+                        <i class="fas fa-clock-rotate-left text-blue-500"></i> Registro de Movimentações (Últimos 100)
+                    </h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead class="bg-white border-b border-slate-200 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
+                            <tr>
+                                <th class="px-4 py-3">Data / Hora</th>
+                                <th class="px-4 py-3">Tipo</th>
+                                <th class="px-4 py-3">Produto Lançado</th>
+                                <th class="px-4 py-3 text-center">Qtd</th>
+                                <th class="px-4 py-3"><i class="fas fa-hand-holding text-blue-400 mr-1"></i> Solicitante/Origem</th>
+                                <th class="px-4 py-3"><i class="fas fa-map-pin text-red-400 mr-1"></i> Destino</th>
+                                <th class="px-4 py-3 text-right"><i class="fas fa-user-shield text-slate-400 mr-1"></i> Operador</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-historico" class="divide-y divide-slate-100 text-slate-600">
+                            <!-- Preenchido via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ========================================== -->
+    <!-- MODAIS DO SISTEMA -->
+    <!-- ========================================== -->
+
+    <!-- MODAL 1: CADASTRAR/EDITAR PRODUTO -->
+    <div id="modal-produto" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex-col items-center justify-center p-4 modal opacity-0 invisible">
+        <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-slate-800 p-5 flex justify-between items-center text-white">
+                <h2 id="titulo-modal-produto" class="font-bold text-lg"><i class="fas fa-box-open mr-2"></i> Ficha do Material</h2>
+                <button onclick="App.UI.fecharModal('modal-produto')" class="text-slate-300 hover:text-white transition text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <form id="form-produto" onsubmit="App.Data.salvarProduto(event)" class="flex flex-col overflow-hidden">
+                <div class="p-6 overflow-y-auto space-y-5">
+                    <input type="hidden" id="p-id">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Código / SKU</label>
+                            <input id="p-codigo" type="text" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none uppercase text-sm transition">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Categoria</label>
+                            <input id="p-categoria" type="text" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm transition" placeholder="Ex: Limpeza, Papelaria">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1 text-blue-600">Descrição do Material <span class="text-red-500">*</span></label>
+                        <input id="p-nome" type="text" required class="w-full p-3 border-2 border-slate-200 rounded-lg focus:border-blue-500 outline-none text-sm font-semibold transition placeholder-slate-300" placeholder="Ex: Resma de Papel A4">
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div class="col-span-2 md:col-span-2 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                            <label class="block text-[11px] font-bold text-amber-700 uppercase mb-1"><i class="fas fa-calendar-alt"></i> Data de Validade</label>
+                            <input id="p-validade" type="date" class="w-full p-2 bg-white border border-amber-300 rounded focus:border-amber-500 outline-none text-xs text-amber-900 font-bold cursor-pointer">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Unidade <span class="text-red-500">*</span></label>
+                            <select id="p-unidade" required class="w-full p-2.5 border border-slate-300 rounded-lg focus:border-blue-500 outline-none text-xs bg-white">
+                                <option value="UN">UN (Und)</option>
+                                <option value="CX">CX (Caixa)</option>
+                                <option value="KG">KG (Quilo)</option>
+                                <option value="LT">LT (Litro)</option>
+                                <option value="PCT">PCT (Pacote)</option>
+                                <option value="M">M (Metro)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Saldo <span class="text-red-500">*</span></label>
+                            <input id="p-qtd" type="number" required min="0" class="w-full p-2.5 border border-slate-300 rounded-lg focus:border-blue-500 outline-none font-black text-sm text-blue-700 bg-slate-50" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Mínimo</label>
+                            <input id="p-min" type="number" min="0" class="w-full p-2.5 border border-slate-300 rounded-lg focus:border-blue-500 outline-none text-red-600 font-bold text-sm bg-slate-50" placeholder="5">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Localização Física no Estoque</label>
+                        <input id="p-local" type="text" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:border-blue-500 outline-none text-sm transition" placeholder="Ex: Prateleira B - Gaveta 3">
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-5 border-t border-slate-200 flex justify-end gap-3 mt-auto">
+                    <button type="button" onclick="App.UI.fecharModal('modal-produto')" class="px-5 py-2.5 text-slate-600 font-semibold hover:bg-slate-200 rounded-lg transition text-sm">Cancelar</button>
+                    <button type="submit" id="btn-salvar-produto" class="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md flex items-center gap-2">
+                        <i class="fas fa-save"></i> Salvar Cadastro
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: MOVIMENTAÇÃO (ENTRADA/SAÍDA) -->
+    <div id="modal-movimento" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex-col items-center justify-center p-4 modal opacity-0 invisible">
+        <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border-2 border-transparent" id="borda-modal-mov">
+            <div id="header-movimento" class="p-5 flex justify-between items-center text-white">
+                <h2 id="titulo-modal-movimento" class="font-black text-lg uppercase tracking-wider flex items-center gap-2">Registro</h2>
+                <button onclick="App.UI.fecharModal('modal-movimento')" class="text-white/70 hover:text-white transition text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <form id="form-movimento" onsubmit="App.Data.confirmarMovimento(event)">
+                <div class="p-6 space-y-5">
+                    <input type="hidden" id="m-produto-id">
+                    <input type="hidden" id="m-produto-nome">
+                    <input type="hidden" id="m-saldo-atual">
+                    <input type="hidden" id="m-tipo">
+
+                    <!-- Info do Produto -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center shadow-inner">
+                        <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Item Selecionado</p>
+                        <p id="m-display-nome" class="font-black text-slate-800 text-lg leading-tight">---</p>
+                        <div class="mt-3 inline-block px-4 py-1 bg-white border border-slate-200 rounded-full shadow-sm">
+                            <p class="text-xs font-semibold text-slate-500">Saldo Atual: <span id="m-display-saldo" class="font-black text-xl ml-1">0</span></p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-black uppercase mb-2 text-center" id="label-qtd">Quantidade *</label>
+                        <input id="m-qtd" type="number" required min="1" class="w-full p-4 border-2 border-slate-300 rounded-xl text-center text-4xl font-black focus:outline-none focus:ring-0 transition placeholder-slate-200" placeholder="0">
+                    </div>
+                    
+                    <div class="space-y-3 pt-3 border-t border-slate-100">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1" id="label-solicitante">Solicitante/Origem <span class="text-red-500">*</span></label>
+                            <input id="m-solicitante" required type="text" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:border-blue-500 outline-none text-sm transition">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1" id="label-destino">Destino / Observação <span class="text-red-500">*</span></label>
+                            <input id="m-destino" required type="text" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:border-blue-500 outline-none text-sm transition">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Operador do Sistema (Seu Nome) <span class="text-red-500">*</span></label>
+                            <input id="m-responsavel" required type="text" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:border-blue-500 outline-none text-sm transition">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-100 p-5 border-t border-slate-200 flex flex-col md:flex-row justify-end gap-3">
+                    <button type="button" onclick="App.UI.fecharModal('modal-movimento')" class="w-full md:w-auto px-5 py-3 text-slate-600 font-semibold hover:bg-slate-200 rounded-lg transition text-sm">Cancelar</button>
+                    <button type="submit" id="btn-salvar-movimento" class="w-full md:w-auto px-8 py-3 text-white font-black rounded-lg transition shadow-md text-sm uppercase tracking-wide flex justify-center items-center gap-2">
+                        Confirmar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- JAVASCRIPT / ARQUITETURA DO APP            -->
+    <!-- ========================================== -->
+    <script>
+        /* 
+         * ⚠️ AVISO DE SEGURANÇA (Supabase):
+         * Expor as chaves ANON_KEY no frontend é seguro APENAS SE você tiver configurado 
+         * as políticas RLS (Row Level Security) no painel do Supabase.
+         * Certifique-se de ativar o RLS para as tabelas `produtos` e `movimentacoes`.
+         */
+        const CONFIG = {
+            SB_URL: 'https://wrzaomyuspclwfdeqbon.supabase.co',
+            SB_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyemFvbXl1c3BjbHdmZGVxYm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwOTU3NTEsImV4cCI6MjA4OTY3MTc1MX0.A7KSDPGLRPmpWdptZAtMDLozEIQv3w_n4OOnbkmhDPI'
+        };
+
+        // Instância global do App para organização
+        const App = {
+            State: {
+                produtos: [],
+                historico: [],
+                supabase: null,
+                searchTimer: null
+            },
+            
+            // ================= INICIALIZAÇÃO =================
+            init: async () => {
+                App.State.supabase = supabase.createClient(CONFIG.SB_URL, CONFIG.SB_KEY);
+                
+                // Configura input de busca com debounce
+                document.getElementById('busca').addEventListener('input', (e) => {
+                    clearTimeout(App.State.searchTimer);
+                    App.State.searchTimer = setTimeout(() => App.UI.filtrarEstoque(e.target.value), 300);
+                });
+
+                // Recupera último usuário para facilitar
+                const lastUser = localStorage.getItem('last_user');
+                if(lastUser) document.getElementById('m-responsavel').value = lastUser;
+
+                await App.sincronizar();
+            },
+
+            sincronizar: async () => {
+                App.UI.toggleLoader(true);
+                try {
+                    // Busca paralela para maior performance
+                    const [resProd, resHist] = await Promise.all([
+                        App.State.supabase.from('produtos').select('*').order('nome'),
+                        App.State.supabase.from('movimentacoes').select('*').order('data', {ascending: false}).limit(100)
+                    ]);
+
+                    if (resProd.error) throw resProd.error;
+                    if (resHist.error) throw resHist.error;
+
+                    App.State.produtos = resProd.data || [];
+                    App.State.historico = resHist.data || [];
+
+                    App.UI.renderTodos();
+                } catch (error) {
+                    console.error(error);
+                    App.UI.toast('error', 'Falha ao sincronizar com o servidor.');
+                } finally {
+                    App.UI.toggleLoader(false);
+                }
+            },
+
+            // ================= LÓGICA DE DADOS =================
+            Data: {
+                salvarProduto: async (event) => {
+                    event.preventDefault();
+                    
+                    const id = document.getElementById('p-id').value;
+                    const btn = document.getElementById('btn-salvar-produto');
+                    const validadeInput = document.getElementById('p-validade').value;
+                    
+                    const payload = {
+                        codigo: document.getElementById('p-codigo').value.trim().toUpperCase(),
+                        nome: document.getElementById('p-nome').value.trim(),
+                        categoria: document.getElementById('p-categoria').value.trim(),
+                        unidade: document.getElementById('p-unidade').value,
+                        quantidade: parseInt(document.getElementById('p-qtd').value) || 0,
+                        estoque_minimo: parseInt(document.getElementById('p-min').value) || 0,
+                        localizacao: document.getElementById('p-local').value.trim(),
+                        data_validade: validadeInput ? validadeInput : null
+                    };
+
+                    try {
+                        App.UI.btnLoading(btn, true);
+                        if (id) {
+                            delete payload.quantidade; // Não atualiza qtd na edição direta para evitar fraudes (só via mov.)
+                            const { error } = await App.State.supabase.from('produtos').update(payload).eq('id', id);
+                            if(error) throw error;
+                            App.UI.toast('success', 'Produto atualizado com sucesso!');
+                        } else {
+                            const { error } = await App.State.supabase.from('produtos').insert([payload]);
+                            if(error) throw error;
+                            App.UI.toast('success', 'Novo produto cadastrado!');
+                        }
+                        
+                        App.UI.fecharModal('modal-produto');
+                        await App.sincronizar();
+                    } catch (error) {
+                        App.UI.toast('error', error.message);
+                    } finally {
+                        App.UI.btnLoading(btn, false, '<i class="fas fa-save"></i> Salvar Cadastro');
+                    }
+                },
+
+                excluirProduto: async (id, nome) => {
+                    const confirm = await Swal.fire({
+                        title: 'Tem certeza?',
+                        html: `Apagar definitivamente o item <b>${nome}</b>?`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#64748b',
+                        confirmButtonText: 'Sim, apagar!'
+                    });
+
+                    if (confirm.isConfirmed) {
+                        App.UI.toggleLoader(true);
+                        try {
+                            const { error } = await App.State.supabase.from('produtos').delete().eq('id', id);
+                            if (error) throw error;
+                            App.UI.toast('success', 'Item excluído!');
+                            await App.sincronizar();
+                        } catch (error) {
+                            App.UI.toast('error', 'Erro ao excluir.');
+                        } finally {
+                            App.UI.toggleLoader(false);
+                        }
+                    }
+                },
+
+                confirmarMovimento: async (event) => {
+                    event.preventDefault();
+                    const idProd = document.getElementById('m-produto-id').value;
+                    const nomeProd = document.getElementById('m-produto-nome').value;
+                    const saldoAtual = parseInt(document.getElementById('m-saldo-atual').value);
+                    const tipo = document.getElementById('m-tipo').value;
+                    const qtd = parseInt(document.getElementById('m-qtd').value);
+                    const responsavel = document.getElementById('m-responsavel').value.trim();
+                    const solicitante = document.getElementById('m-solicitante').value.trim();
+                    const destino = document.getElementById('m-destino').value.trim();
+
+                    // Salva operador no localStorage
+                    localStorage.setItem('last_user', responsavel);
+
+                    let novoSaldo = saldoAtual;
+                    if(tipo === 'ENTRADA') novoSaldo += qtd;
+                    if(tipo === 'SAIDA') {
+                        if(qtd > saldoAtual) {
+                            return App.UI.toast('warning', 'Quantidade de saída supera o saldo atual!');
+                        }
+                        novoSaldo -= qtd;
+                    }
+
+                    const btn = document.getElementById('btn-salvar-movimento');
+                    try {
+                        App.UI.btnLoading(btn, true);
+                        
+                        // Atualiza Estoque
+                        const { error: errUpd } = await App.State.supabase.from('produtos').update({ quantidade: novoSaldo }).eq('id', idProd);
+                        if(errUpd) throw errUpd;
+
+                        // Grava Histórico
+                        const { error: errInsert } = await App.State.supabase.from('movimentacoes').insert([{
+                            produto_nome: nomeProd,
+                            tipo: tipo,
+                            quantidade: qtd,
+                            responsavel: responsavel,
+                            solicitante: solicitante,
+                            destino: destino,
+                            data: new Date().toISOString()
+                        }]);
+                        if(errInsert) throw errInsert;
+
+                        App.UI.fecharModal('modal-movimento');
+                        App.UI.toast('success', `${tipo} registrada com sucesso!`);
+                        await App.sincronizar();
+                        
+                    } catch (error) {
+                        App.UI.toast('error', 'Erro ao processar movimentação.');
+                    } finally {
+                        App.UI.btnLoading(btn, false, 'Confirmar');
+                    }
+                }
+            },
+
+            // ================= INTERFACE (UI) =================
+            UI: {
+                toast: (icon, title) => {
+                    Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true })
+                        .fire({ icon, title });
+                },
+
+                toggleLoader: (show) => {
+                    const l = document.getElementById('loader-overlay');
+                    show ? (l.classList.remove('hidden'), l.classList.add('flex')) : (l.classList.add('hidden'), l.classList.remove('flex'));
+                },
+
+                btnLoading: (el, isLoading, originalText = '') => {
+                    if (isLoading) {
+                        el.disabled = true;
+                        el.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+                        el.classList.add('opacity-75', 'cursor-not-allowed');
+                    } else {
+                        el.disabled = false;
+                        el.innerHTML = originalText;
+                        el.classList.remove('opacity-75', 'cursor-not-allowed');
+                    }
+                },
+
+                abrirModalProduto: (id = null) => {
+                    const form = document.getElementById('form-produto');
+                    form.reset();
+                    document.getElementById('p-id').value = '';
+                    
+                    if (id) {
+                        const p = App.State.produtos.find(x => x.id === id);
+                        if (p) {
+                            document.getElementById('p-id').value = p.id;
+                            document.getElementById('p-codigo').value = p.codigo || '';
+                            document.getElementById('p-nome').value = p.nome;
+                            document.getElementById('p-categoria').value = p.categoria || '';
+                            document.getElementById('p-unidade').value = p.unidade || 'UN';
+                            document.getElementById('p-qtd').value = p.quantidade;
+                            document.getElementById('p-qtd').disabled = true; 
+                            document.getElementById('p-qtd').classList.add('bg-slate-200', 'cursor-not-allowed');
+                            document.getElementById('p-min').value = p.estoque_minimo || 0;
+                            document.getElementById('p-local').value = p.localizacao || '';
+                            document.getElementById('p-validade').value = p.data_validade || '';
+                            document.getElementById('titulo-modal-produto').innerHTML = '<i class="fas fa-pen text-blue-400 mr-2"></i> Editar Material';
+                        }
+                    } else {
+                        document.getElementById('p-qtd').disabled = false;
+                        document.getElementById('p-qtd').classList.remove('bg-slate-200', 'cursor-not-allowed');
+                        document.getElementById('titulo-modal-produto').innerHTML = '<i class="fas fa-plus-circle text-blue-400 mr-2"></i> Novo Material';
+                    }
+                    
+                    const m = document.getElementById('modal-produto');
+                    m.classList.remove('hidden', 'opacity-0', 'invisible');
+                    m.classList.add('flex', 'opacity-100', 'visible');
+                },
+
+                abrirModalMovimento: (id, nome, saldo, tipo) => {
+                    const form = document.getElementById('form-movimento');
+                    form.reset(); // Limpa form, mas mantem os hidden inputs
+                    
+                    document.getElementById('m-produto-id').value = id;
+                    document.getElementById('m-produto-nome').value = nome;
+                    document.getElementById('m-saldo-atual').value = saldo;
+                    document.getElementById('m-tipo').value = tipo;
+                    
+                    document.getElementById('m-display-nome').innerText = nome;
+                    document.getElementById('m-display-saldo').innerText = saldo;
+
+                    // Restaura responsavel se houver no storage
+                    const lastUser = localStorage.getItem('last_user');
+                    if(lastUser) document.getElementById('m-responsavel').value = lastUser;
+
+                    const header = document.getElementById('header-movimento');
+                    const btn = document.getElementById('btn-salvar-movimento');
+                    const borda = document.getElementById('borda-modal-mov');
+                    const inputQtd = document.getElementById('m-qtd');
+                    
+                    if(tipo === 'ENTRADA') {
+                        header.className = "p-5 flex justify-between items-center text-white bg-emerald-600";
+                        borda.className = "modal-content bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border-t-8 border-emerald-500";
+                        document.getElementById('titulo-modal-movimento').innerHTML = '<i class="fas fa-arrow-down mr-2"></i> ENTRADA DE MATERIAL';
+                        document.getElementById('label-solicitante').innerHTML = 'Fornecedor / Origem <span class="text-red-500">*</span>';
+                        document.getElementById('label-destino').innerHTML = 'Onde foi guardado / NF <span class="text-red-500">*</span>';
+                        inputQtd.className = "w-full p-4 border-2 border-emerald-200 text-emerald-700 rounded-xl text-center text-4xl font-black focus:border-emerald-500 outline-none transition bg-emerald-50";
+                        btn.className = "w-full md:w-auto px-8 py-3 bg-emerald-600 text-white font-black rounded-lg hover:bg-emerald-700 transition shadow-md uppercase tracking-wide flex items-center justify-center gap-2";
+                        btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Entrada';
+                    } else {
+                        header.className = "p-5 flex justify-between items-center text-white bg-rose-600";
+                        borda.className = "modal-content bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border-t-8 border-rose-500";
+                        document.getElementById('titulo-modal-movimento').innerHTML = '<i class="fas fa-arrow-up mr-2"></i> SAÍDA DE MATERIAL';
+                        document.getElementById('label-solicitante').innerHTML = 'Quem está retirando? <span class="text-red-500">*</span>';
+                        document.getElementById('label-destino').innerHTML = 'Destino (Setor/Obra) <span class="text-red-500">*</span>';
+                        inputQtd.className = "w-full p-4 border-2 border-rose-200 text-rose-700 rounded-xl text-center text-4xl font-black focus:border-rose-500 outline-none transition bg-rose-50";
+                        btn.className = "w-full md:w-auto px-8 py-3 bg-rose-600 text-white font-black rounded-lg hover:bg-rose-700 transition shadow-md uppercase tracking-wide flex items-center justify-center gap-2";
+                        btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Saída';
+                    }
+
+                    const m = document.getElementById('modal-movimento');
+                    m.classList.remove('hidden', 'opacity-0', 'invisible');
+                    m.classList.add('flex', 'opacity-100', 'visible');
+                    setTimeout(() => inputQtd.focus(), 300);
+                },
+
+                fecharModal: (id) => {
+                    const m = document.getElementById(id);
+                    m.classList.remove('opacity-100', 'visible');
+                    m.classList.add('opacity-0', 'invisible');
+                    setTimeout(() => m.classList.replace('flex', 'hidden'), 200);
+                },
+
+                formatDataBR: (isoString) => {
+                    if(!isoString) return '-';
+                    const d = new Date(isoString);
+                    // Correção de timezone
+                    d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+                    return d.toLocaleDateString('pt-BR');
+                },
+
+                renderTodos: () => {
+                    App.UI.renderDashboard();
+                    App.UI.renderEstoque(App.State.produtos);
+                    App.UI.renderHistorico();
+                },
+
+                renderDashboard: () => {
+                    const { produtos } = App.State;
+                    document.getElementById('dash-total-itens').innerText = produtos.length;
+                    
+                    const totalPecas = produtos.reduce((acc, p) => acc + (p.quantidade || 0), 0);
+                    document.getElementById('dash-total-pecas').innerText = totalPecas.toLocaleString('pt-BR');
+
+                    const emAlerta = produtos.filter(p => p.quantidade <= (p.estoque_minimo || 0));
+                    document.getElementById('dash-alertas').innerText = emAlerta.length;
+
+                    const tbody = document.getElementById('tabela-alertas');
+                    tbody.innerHTML = emAlerta.slice(0,8).map(p => `
+                        <tr class="hover:bg-slate-50 transition border-b border-slate-50 last:border-0">
+                            <td class="px-6 py-2.5 font-bold text-slate-700 text-xs">${p.nome} <br><span class="text-[10px] font-normal text-slate-400 font-mono">${p.codigo || 'S/N'}</span></td>
+                            <td class="px-6 py-2.5 text-center text-slate-500 text-xs font-semibold">${p.estoque_minimo || 0}</td>
+                            <td class="px-6 py-2.5 text-right font-black text-rose-600 text-base">${p.quantidade}</td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="3" class="px-6 py-8 text-center text-sm text-emerald-600 font-bold"><div class="flex flex-col items-center"><i class="fas fa-check-circle text-3xl mb-2 opacity-50"></i> Estoque Saudável!</div></td></tr>';
+                },
+
+                renderEstoque: (lista) => {
+                    const tbody = document.getElementById('tabela-estoque');
+                    if (lista.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-12 text-slate-400"><i class="fas fa-box-open text-5xl mb-4 block opacity-30"></i>Nenhum material encontrado.</td></tr>';
+                        return;
+                    }
+
+                    tbody.innerHTML = lista.map(p => {
+                        const critico = p.quantidade <= p.estoque_minimo;
+                        const validadeTxt = p.data_validade ? `<br><span class="text-[10px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 mt-1 inline-block"><i class="fas fa-clock"></i> Val: ${App.UI.formatDataBR(p.data_validade)}</span>` : '';
+                        
+                        return `
+                        <tr class="hover:bg-blue-50/50 transition border-b border-slate-100 group">
+                            <td class="px-5 py-3 font-mono text-[11px] text-slate-500">${p.codigo || '-'}</td>
+                            <td class="px-5 py-3 font-bold text-slate-800 text-sm">
+                                ${p.nome}
+                                ${critico ? '<span class="ml-2 text-[9px] bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full uppercase font-black tracking-wide border border-rose-200">Baixo</span>' : ''}
+                                <br><span class="text-[10px] font-medium text-slate-400"><i class="fas fa-location-dot mr-1"></i> ${p.localizacao || 'Sem local'}</span>
+                            </td>
+                            <td class="px-5 py-3 text-xs text-slate-600"><span class="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">${p.categoria || 'Geral'}</span>${validadeTxt}</td>
+                            <td class="px-5 py-3 text-center text-[10px] font-bold text-slate-400 uppercase">${p.unidade || 'UN'}</td>
+                            <td class="px-5 py-3 text-right font-black text-lg ${critico ? 'text-rose-600' : 'text-slate-700'}">${p.quantidade}</td>
+                            <td class="px-5 py-3 text-center border-l border-slate-100 bg-slate-50/30">
+                                <div class="flex items-center justify-center gap-2">
+                                    <button onclick="App.UI.abrirModalMovimento('${p.id}', '${p.nome}', ${p.quantidade}, 'SAIDA')" class="w-8 h-8 rounded bg-rose-100 text-rose-600 hover:bg-rose-500 hover:text-white flex items-center justify-center font-bold shadow-sm transition-all transform hover:scale-110" title="Retirar Material"><i class="fas fa-minus"></i></button>
+                                    <button onclick="App.UI.abrirModalMovimento('${p.id}', '${p.nome}', ${p.quantidade}, 'ENTRADA')" class="w-8 h-8 rounded bg-emerald-100 text-emerald-600 hover:bg-emerald-500 hover:text-white flex items-center justify-center font-bold shadow-sm transition-all transform hover:scale-110" title="Adicionar Material"><i class="fas fa-plus"></i></button>
+                                </div>
+                            </td>
+                            <td class="px-5 py-3 text-center">
+                                <button onclick="App.UI.abrirModalProduto('${p.id}')" class="text-slate-400 hover:text-blue-500 mr-2 transition-colors p-1" title="Editar"><i class="fas fa-edit"></i></button>
+                                <button onclick="App.Data.excluirProduto('${p.id}', '${p.nome}')" class="text-slate-400 hover:text-rose-500 transition-colors p-1" title="Excluir"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `}).join('');
+                },
+
+                renderHistorico: () => {
+                    const tbody = document.getElementById('tabela-historico');
+                    if (App.State.historico.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-slate-400">Nenhum registro encontrado.</td></tr>';
+                        return;
+                    }
+
+                    tbody.innerHTML = App.State.historico.map(h => {
+                        const inIn = h.tipo === 'ENTRADA';
+                        const dt = new Date(h.data);
+                        return `
+                        <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                            <td class="px-4 py-3 text-xs text-slate-600 font-medium">
+                                ${dt.toLocaleDateString('pt-BR')} <span class="text-[10px] text-slate-400 ml-1 font-mono">${dt.toLocaleTimeString('pt-BR').slice(0,5)}</span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="px-2.5 py-1 text-[9px] font-black rounded-sm uppercase tracking-wider ${inIn ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">${h.tipo}</span>
+                            </td>
+                            <td class="px-4 py-3 font-bold text-slate-800 text-sm truncate max-w-[200px]" title="${h.produto_nome}">${h.produto_nome}</td>
+                            <td class="px-4 py-3 text-center font-black text-base ${inIn ? 'text-emerald-600' : 'text-rose-600'}">${inIn ? '+' : '-'}${h.quantidade}</td>
+                            <td class="px-4 py-3 text-xs font-semibold text-slate-700 truncate max-w-[150px]">${h.solicitante || '-'}</td>
+                            <td class="px-4 py-3 text-xs text-slate-600 truncate max-w-[150px]">${h.destino || '-'}</td>
+                            <td class="px-4 py-3 text-[10px] text-slate-400 font-bold text-right uppercase tracking-wider">${h.responsavel || '-'}</td>
+                        </tr>
+                    `}).join('');
+                },
+
+                filtrarEstoque: (termo) => {
+                    termo = termo.toLowerCase();
+                    const filtrados = App.State.produtos.filter(p => 
+                        p.nome.toLowerCase().includes(termo) || 
+                        (p.categoria && p.categoria.toLowerCase().includes(termo)) ||
+                        (p.codigo && p.codigo.toLowerCase().includes(termo))
+                    );
+                    App.UI.renderEstoque(filtrados);
+                }
+            },
+
+            // ================= UTILITÁRIOS =================
+            mudarAba: (idAba) => {
+                // Esconde todas as sections
+                document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+                document.getElementById(idAba).classList.remove('hidden');
+
+                // Reseta botoes desktop
+                document.querySelectorAll('nav button').forEach(b => {
+                    b.classList.remove('tab-active'); b.classList.add('tab-inactive');
+                });
+                const btnDesktop = document.getElementById('btn-' + idAba);
+                if(btnDesktop) { btnDesktop.classList.remove('tab-inactive'); btnDesktop.classList.add('tab-active'); }
+
+                // Reseta botoes mobile
+                const mBtns = ['m-btn-aba-dashboard', 'm-btn-aba-estoque', 'm-btn-aba-historico'];
+                mBtns.forEach(id => {
+                    const b = document.getElementById(id);
+                    if(b) { b.classList.remove('text-blue-700', 'border-b-2', 'border-blue-600'); b.classList.add('text-slate-500'); }
+                });
+                const btnMobile = document.getElementById('m-btn-' + idAba);
+                if(btnMobile) { btnMobile.classList.remove('text-slate-500'); btnMobile.classList.add('text-blue-700', 'border-b-2', 'border-blue-600'); }
+            },
+
+            gerarPDF: () => {
+                if(App.State.produtos.length === 0) return App.UI.toast('warning', 'Sem dados para exportar.');
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                doc.setFillColor(30, 64, 175); // bg-blue-800
+                doc.rect(0, 0, 210, 22, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(14);
+                doc.text("ALMOXARIFADO - NÚCLEO SÃO JOÃO", 14, 14);
+                
+                doc.setTextColor(100, 100, 100);
+                doc.setFontSize(9);
+                doc.setFont("helvetica", "normal");
+                doc.text(`Relatório de Estoque Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 30);
+
+                const corpo = App.State.produtos.map(p => [
+                    p.codigo || '-',
+                    p.nome, 
+                    p.categoria || '-',
+                    p.quantidade.toString() + ' ' + (p.unidade || 'UN'), 
+                    p.localizacao || '-'
+                ]);
+                
+                doc.autoTable({ 
+                    head: [['Código', 'Descrição do Material', 'Categoria', 'Saldo Total', 'Localização']], 
+                    body: corpo, 
+                    startY: 35,
+                    theme: 'striped',
+                    headStyles: { fillColor: [51, 65, 85], fontSize: 9 }, // bg-slate-700
+                    styles: { fontSize: 8, cellPadding: 3 },
+                    columnStyles: { 3: { fontStyle: 'bold', halign: 'center' }
